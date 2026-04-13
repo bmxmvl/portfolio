@@ -1,0 +1,98 @@
+name: Deploy DAG to Airflow
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'dags/**'  # Запускать только при изменениях в папке dags
+  workflow_dispatch:
+    inputs:
+      file_name:
+        description: 'Имя файла DAG для деплоя (например, my_dag.py)'
+        required: true
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Получаем список изменённых файлов (только для автоматического запуска)
+      - name: Get changed DAG files
+        if: ${{ !github.event.inputs.file_name }}
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            dags/**
+
+      # Определяем, какие файлы обрабатывать
+      - name: Determine DAG files to deploy
+        id: dag-files
+        run: |
+          if [ -n "${{ github.event.inputs.file_name }}" ]; then
+            # Ручной запуск: проверяем существование файла
+            file_path="dags/${{ github.event.inputs.file_name }}"
+            if [ ! -f "$file_path" ]; then
+              echo "Error: File not found: $file_path"
+              exit 1
+            fi
+            echo "manual_file=$file_path" >> $GITHUB_OUTPUT
+          else
+            # Автоматический запуск: используем вывод changed-files
+            changed_files="${{ steps.changed-files.outputs.all_changed_files }}"
+            if [ -z "$changed_files" ]; then
+              echo "No changed DAG files found. Skipping deployment."
+              exit 0  # Не ошибка — просто нет изменений
+            fi
+            echo "changed_files=$changed_files" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_OUTPUT: $GITHUB_OUTPUT
+
+      # Переименовываем файлы
+      - name: Rename DAG files with GitHub actor
+        run: |
+          OWNER="${{ secrets.OWNER }}"
+          mkdir -p ${{ secrets.OWNER }}/dags
+          
+          # Определяем список файлов для обработки
+          if [ -n "${{ steps.dag-files.outputs.manual_file }}" ]; then
+            files_to_process="${{ steps.dag-files.outputs.manual_file }}"
+          else
+            files_to_process="${{ steps.changed-files.outputs.all_changed_files }}"
+          fi
+          
+          # Проходим по всем файлам
+          for file in $files_to_process; do
+            if [[ $file == dags/* ]]; then
+              filename=$(basename "$file")
+              name_without_ext="${filename%.py}"
+              new_filename="${name_without_ext}_${OWNER}.py"
+              cp "$file" "${{ secrets.OWNER }}/dags/$new_filename"
+              sed -i "s/{{ OWNER }}/${OWNER}/g" "${OWNER}/dags/$new_filename"
+            fi
+          done
+
+      - name: Create user folder on VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/dags"
+
+      # Копируем файлы на VM
+      - name: Copy renamed DAGs to VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "${{ secrets.OWNER }}/dags/*"
+          target: "/home/apache-superset/airflow/dags/"

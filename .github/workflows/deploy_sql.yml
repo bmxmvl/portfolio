@@ -1,0 +1,61 @@
+name: Deploy SQL Scripts to Airflow
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'sql/**'  # Запускать только при изменениях в папке sql
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Получаем список изменённых файлов
+      - name: Get changed SQL files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            sql/**
+
+      # Создаём папку пользователя на ВМ
+      - name: Create user folder on VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/sql"
+
+      # Заменяем плейсхолдеры в SQL-файлах
+      - name: Replace placeholders in SQL files with GitHub actor
+        if: steps.changed-files.outputs.any_changed == 'true'
+        run: |
+          OWNER="${{ secrets.OWNER }}"
+          # Проходим по всем изменённым файлам
+          for file in ${{ steps.changed-files.outputs.all_changed_files }}; do
+            if [[ $file == sql/* ]]; then
+              # Заменяем плейсхолдеры в исходном файле
+              sed -i "s/{{ OWNER }}/${OWNER}/g" "$file"
+            fi
+          done
+
+      # Копируем SQL-файлы на ВМ
+      - name: Copy SQL scripts to VM
+        if: > 
+          steps.changed-files.outputs.any_changed == 'true' ||
+          github.event_name == 'workflow_dispatch'
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "sql/"  # Копируем всю папку sql/
+          target: "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/dags/"
