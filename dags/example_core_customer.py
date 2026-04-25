@@ -8,7 +8,7 @@ OWNER = "{{ OWNER }}" #обеспечивает уникальность даг�
 with DAG(
           dag_id=f'example_core_customer_dag_{OWNER}', #меняет название дага до _dag
           start_date = datetime(2024, 4, 21),
-          schedule='0 7 * * *', #меняем расписание запуска дага
+          schedule='0 6 * * *', #меняем расписание запуска дага
           catchup=False,
           tags=[OWNER],
           default_args={
