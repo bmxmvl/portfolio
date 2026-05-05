@@ -19,7 +19,7 @@ with DAG(
           core_customer = PythonOperator( #меняем название задачи
                   task_id = 'paid_orders', #меняем название задачи
                   python_callable=execute_sql_script,
-                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql//paid_orders'} #меняем название sql скрипта
+                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/paid_orders'} #меняем название sql скрипта
           )
 
 core_customer #меняем название задачи
