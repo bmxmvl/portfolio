@@ -16,10 +16,10 @@ with DAG(
           }
 ) as dag:
 # создаем задачу, в которой вызываем python функцию execute_sql_script и передаем в нее название sql скрипта
-          core_customer = PythonOperator( #меняем название задачи
+          paid_orders = PythonOperator( #меняем название задачи
                   task_id = 'paid_orders', #меняем название задачи
                   python_callable=execute_sql_script,
                   op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/paid_orders'} #меняем название sql скрипта
           )
 
-core_customer #меняем название задачи
+paid_orders #меняем название задачи
