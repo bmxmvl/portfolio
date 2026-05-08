@@ -3,23 +3,22 @@ from airflow.operators.python import PythonOperator
 from datetime import datetime 
 from functions import execute_sql_script    
 
-OWNER = "{{ OWNER }}" #обеспечивает уникальность дагов по ученикам для деплоя
+OWNER = "{{ OWNER }}"
 
 with DAG(
-          dag_id=f'ym_marketing_report_dag_{OWNER}', #меняет название дага до _dag
+          dag_id=f'ym_marketing_report_dag_{OWNER}',
           start_date = datetime(2026, 5, 7),
-          schedule='0 8 * * *', #меняем расписание запуска дага
+          schedule='0 5 * * *', 
           catchup=False,
           tags=[OWNER],
           default_args={
                     "owner": OWNER
           }
 ) as dag:
-# создаем задачу, в которой вызываем python функцию execute_sql_script и передаем в нее название sql скрипта
-          ym_marketing_report = PythonOperator( #меняем название задачи
-                  task_id = 'ym_marketing_report', #меняем название задачи
+          ym_marketing_report = PythonOperator( 
+                  task_id = 'ym_marketing_report', 
                   python_callable=execute_sql_script,
-                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/ym_marketing_report'} #меняем название sql скрипта
+                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/ym_marketing_report'} 
           )
 
-ym_marketing_report #меняем название задачи
+ym_marketing_report 
