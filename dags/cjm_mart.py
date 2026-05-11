@@ -8,7 +8,7 @@ OWNER = "{{ OWNER }}"
 with DAG(
           dag_id=f'cjm_mart_dag_{OWNER}',
           start_date = datetime(2026, 5, 10),
-          schedule_interval='0 6,12 * * *',
+          schedule='0 6,12 * * *',
           catchup=False,
           tags=[OWNER],
           default_args={
