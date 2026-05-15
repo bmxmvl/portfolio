@@ -15,7 +15,7 @@ with DAG(
                     "owner": OWNER
           }
 ) as dag:
-          ym_marketing_report = PythonOperator( 
+          customers_mart_inc = PythonOperator( 
                   task_id = 'customers_mart_inc', 
                   python_callable=execute_sql_script,
                   op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/customers_mart_inc'} 
