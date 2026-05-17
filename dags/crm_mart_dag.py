@@ -18,7 +18,7 @@ with DAG(
           crm_mart_dag = PythonOperator( 
                   task_id = 'crm_mart_dag', 
                   python_callable=execute_sql_script,
-                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/crm_mart_dag'} 
+                  op_kwargs={'file_path': f'/opt/airflow/dags/{OWNER}/dags/sql/crm_mart'} 
           )
 
 crm_mart_dag
