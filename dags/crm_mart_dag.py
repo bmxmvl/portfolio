@@ -6,7 +6,7 @@ from functions import execute_sql_script
 OWNER = "{{ OWNER }}"
 
 with DAG(
-          dag_id=f'ym_marketing_report_dag_{OWNER}',
+          dag_id=f'crm_mart_dag_{OWNER}',
           start_date = datetime(2026, 5, 17),
           schedule='0 7 * * *', 
           catchup=False,
