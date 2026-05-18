@@ -37,6 +37,7 @@ id as com_id,
 (raw_data::json ->> 'rate')::varchar as rate     
 from raw.crm_sms
 where (raw_data::json ->> 'dtm')::timestamp > coalesce((select max(dtm) from max_b.crm_mart where com_type = 'sms'), timestamp '1900-01-01')
+limit 100000
 ),
 crm_customer_id_cte as (
 select
