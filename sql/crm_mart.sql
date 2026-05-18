@@ -34,25 +34,47 @@ id as com_id,
 (raw_data::json ->> 'status')::varchar as status,
 (raw_data::json ->> 'provider')::varchar as provider,
 (raw_data::json ->> 'type')::varchar as type,
-(raw_data::json ->> 'rate')::varchar as rate     
+(raw_data::json ->> 'rate')::varchar as rate
 from raw.crm_sms
 where (raw_data::json ->> 'dtm')::timestamp > coalesce((select max(dtm) from max_b.crm_mart where com_type = 'sms'), timestamp '1900-01-01')
-limit 100000
+),
+deleted_customers as (
+select customer_id
+from raw.customer_delete
+),
+active_customers as (
+select
+customer_id,
+customer_email,
+customer_phone,
+registration_dtm
+from core.customers
+where not exists (
+	select 1 from deleted_customers d
+	where d.customer_id = customers.customer_id
+)
 ),
 crm_customer_id_cte as (
 select
 *
 from (
-select 
+select
 *,
-row_number() over(partition by a.contact order by registration_dtm desc) as dtm_rn
+row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
 from crm_cte a
-left join core.customers b on a.contact = case 
-	when a.com_type = 'sms' then b.customer_phone 
-	else b.customer_email
-	end
+left join active_customers b on a.contact = b.customer_email
 	and b.registration_dtm < a.dtm
-	and customer_id not in (select customer_id from raw.customer_delete)
+where a.com_type = 'email'
+
+union all
+
+select
+*,
+row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
+from crm_cte a
+left join active_customers b on a.contact = b.customer_phone
+	and b.registration_dtm < a.dtm
+where a.com_type = 'sms'
 ) c
 where dtm_rn = 1
 ),
@@ -74,6 +96,7 @@ left join max_b.crm_costs e on concat(extract(year from d.dtm)::int, 'Q', extrac
     and d.type = e.type
     and coalesce(d.rate, '') = e.rate
 )
-insert into max_b.crm_mart
+
+insert into max_b.crm_mart 
 select *
 from crm_customer_id_cost_cte
