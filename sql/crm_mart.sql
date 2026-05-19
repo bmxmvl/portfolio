@@ -91,7 +91,12 @@ d.rate,
 d.customer_id,
 e.cost
 from crm_customer_id_cte d
-left join max_b.crm_costs e on concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int) = e.quarter
+left join max_b.crm_costs e 
+	on case 
+	when concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int) >= '2026Q2'
+	then '2026Q1'
+	else concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int)
+	end = e.quarter
     and d.com_type = e.com_type
     and d.type = e.type
     and coalesce(d.rate, '') = e.rate
