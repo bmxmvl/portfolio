@@ -93,7 +93,7 @@ e.cost
 from crm_customer_id_cte d
 left join max_b.crm_costs e 
 	on case 
-	when concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int) = '2026Q2'
+	when concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int) > (select max(quarter) from max_b.crm_costs)
 	then '2026Q1'
 	else concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int)
 	end = e.quarter
