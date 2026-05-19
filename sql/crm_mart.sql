@@ -8,7 +8,7 @@ provider varchar,
 type varchar,
 rate varchar,
 customer_id varchar,
-cost varchar
+cost numeric
 );
 
 with crm_cte as (
