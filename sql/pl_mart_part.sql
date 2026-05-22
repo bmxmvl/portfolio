@@ -19,22 +19,6 @@ crm_cost numeric
 )
 ;
 
-CREATE OR REPLACE FUNCTION max_b.calculate_revenue(
-    price NUMERIC, 
-    quantity INT, 
-    discount NUMERIC
-)
-RETURNS NUMERIC AS $$
-DECLARE
-    final_revenue NUMERIC; 
-BEGIN
-    final_revenue := price * quantity * (1 - (coalesce(discount::numeric,0) / 100));
-
-    RETURN final_revenue;
-END;
-$$ LANGUAGE plpgsql
-;
-
 with last_date_cte as (
 select coalesce(max(order_date), date '1900-01-01') as last_order_date
 from max_b.pl_mart
