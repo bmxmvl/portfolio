@@ -27,16 +27,20 @@ agg_cte as (
 select 
 order_date::date as order_date,
 case 
-	when channel is null or channel = '' then 'other'
-	else channel
+    when lower(channel) in ('organic', 'organicsearch') then 'органика'
+    when lower(channel) in ('partner', 'partnership') then 'партнёры'
+    when lower(channel) = 'refferal' then 'реферал'
+    else 'не определено'
 end as channel_name,
 case 
-	when order_type is null or order_type = '' then 'other'
-	else order_type
+    when lower(order_type) = 'paid' then 'оплачен'
+    when lower(order_type) = 'search' then 'не оплачен'
+    else 'не определено'
 end as order_type_name,
 case 
-	when interface is null or interface = '' then 'other'
-	else interface
+    when lower(interface) = 'app' then 'приложение'
+    when lower(interface) = 'web' then 'веб'
+    else 'не определено'
 end as interface_name,
 count(id) as orders_count,
 count(distinct customer_id) as customers_count,
@@ -45,7 +49,7 @@ sum(max_b.calculate_revenue(amount::numeric, quantity::int, discount::numeric)) 
 from core.orders co
 cross join last_date_cte ldc
 where co.order_date > ldc.last_order_date
-group by order_date, channel_name, order_type_name, interface_name
+group by order_date::date, channel_name, order_type_name, interface_name
 ),
 agg_window_cte as (
 select
@@ -66,31 +70,21 @@ select
 (revenue::numeric/revenue_day)*100 as revenue_percent
 from agg_window_cte
 ),
+cost_cte as (
+select
+dtm::date as order_date,
+sum(cost::numeric) as crm_cost
+from max_b.crm_mart
+group by dtm::date
+),
 agg_window_percent_cost_cte as (
 select 
-awpc.*,
-SUM(cm.cost::numeric) over(partition by order_date) as crm_cost
+*
 from agg_window_percent_cte awpc
-left join max_b.crm_mart cm on awpc.order_date = cm.dtm::date
+left join cost_cte cc using (order_date)
 )
 
 insert into max_b.pl_mart
 select
-order_date,
-channel_name,
-order_type_name,
-interface_name,
-orders_count,
-customers_count,
-quantity_amount,
-revenue,
-orders_count_day,
-customers_count_day,
-quantity_amount_day,
-revenue_day,
-orders_percent,
-customers_percent,
-quantity_percent,
-revenue_percent,
-crm_cost
+*
 from agg_window_percent_cost_cte
