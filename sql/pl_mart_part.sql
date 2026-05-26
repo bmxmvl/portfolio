@@ -64,10 +64,10 @@ window w as (partition by order_date)
 agg_window_percent_cte as (
 select
 *,
-(orders_count::numeric/orders_count_day)*100 as orders_percent,
-(customers_count::numeric/customers_count_day)*100 as customers_percent,
-(quantity_amount::numeric/quantity_amount_day)*100 as quantity_percent,
-(revenue::numeric/revenue_day)*100 as revenue_percent
+round((orders_count::numeric/orders_count_day)*100, 2) as orders_percent,
+round((customers_count::numeric/customers_count_day)*100, 2) as customers_percent,
+round((quantity_amount::numeric/quantity_amount_day)*100, 2) as quantity_percent,
+round((revenue::numeric/revenue_day)*100, 2) as revenue_percent
 from agg_window_cte
 ),
 cost_cte as (
