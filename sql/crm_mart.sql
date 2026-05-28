@@ -38,10 +38,12 @@ id as com_id,
 from raw.crm_sms
 where (raw_data::json ->> 'dtm')::timestamp > coalesce((select max(dtm) from max_b.crm_mart where com_type = 'sms'), timestamp '1900-01-01')
 ),
+
 deleted_customers as (
 select customer_id
 from raw.customer_delete
 ),
+
 active_customers as (
 select
 customer_id,
@@ -54,12 +56,20 @@ where not exists (
 	where d.customer_id = customers.customer_id
 )
 ),
+
 crm_customer_id_cte as (
 select
 *
 from (
 select
-*,
+com_id,
+com_type,
+dtm,
+contact,
+status,
+provider,
+type,
+rate,
 row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
 from crm_cte a
 left join active_customers b on a.contact = b.customer_email
@@ -69,7 +79,14 @@ where a.com_type = 'email'
 union all
 
 select
-*,
+com_id,
+com_type,
+dtm,
+contact,
+status,
+provider,
+type,
+rate,
 row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
 from crm_cte a
 left join active_customers b on a.contact = b.customer_phone
@@ -78,6 +95,7 @@ where a.com_type = 'sms'
 ) c
 where dtm_rn = 1
 ),
+
 crm_customer_id_cost_cte as (
 select
 d.com_id,
@@ -103,5 +121,16 @@ left join max_b.crm_costs e
 )
 
 insert into max_b.crm_mart 
-select *
+select
+select
+com_id,
+com_type,
+dtm,
+contact,
+status,
+provider,
+type,
+rate,
+customer_id,
+cost
 from crm_customer_id_cost_cte
