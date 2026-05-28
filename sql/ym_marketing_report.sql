@@ -19,8 +19,9 @@ create table if not exists max_b.ym_marketing_report (
     regioncity varchar null
 );
 
-with ym_hits as (
-select watchid,
+with ym_hits_cte as (
+select 
+watchid,
 counteruseridhash,
 datetime::timestamp,
 referer,
@@ -70,7 +71,7 @@ where insert_dtm::timestamp > coalesce(
     )
 ),
 
-ym_visits as (
+ym_visits_cte as (
 select unnest(string_to_array(trim(both '[]' from watchids), ',')) as watchid,
 visitid,
 isnewuser::boolean,
@@ -84,6 +85,24 @@ FROM raw.ym_visits
 )
 
 insert into max_b.ym_marketing_report
-select *
-from ym_hits
-left join ym_visits using (watchid)
+select
+watchid,
+counteruseridhash,
+datetime,
+referer,
+url,
+external_resource,
+page_title,
+device_type,
+event_type,
+meta_timestamp,
+visitid,
+isnewuser,
+starturl,
+endurl,
+pageviews,
+visitduration,
+regioncountry,
+regioncity
+from ym_hits_cte
+left join ym_visits_cte using (watchid)
