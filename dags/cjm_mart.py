@@ -1,7 +1,14 @@
 from airflow import DAG 
 from airflow.operators.python import PythonOperator 
 from datetime import datetime 
-from functions import execute_sql_script   
+from pathlib import Path
+import sys
+
+dag_folder = Path(__file__).parent
+if str(dag_folder) not in sys.path:
+    sys.path.insert(0, str(dag_folder))
+          
+from functions import execute_sql_script
 
 OWNER = "{{ OWNER }}"
 
