@@ -10,7 +10,6 @@ rate varchar,
 customer_id varchar,
 cost numeric
 );
-
 with crm_cte as (
 select
 id as com_id,
