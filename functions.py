@@ -1,43 +1,58 @@
-import psycopg2
-import logging
-from airflow.models import Variable
+name: Deploy Functions to Airflow
 
-logger = logging.getLogger(__name__)
-host = Variable.get("host_dm")
-login = Variable.get("login")
-password = Variable.get("password")
-db = 'dwh'
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'functions.py'  # Запускать только при изменениях файла functions.py
+  workflow_dispatch:
 
-def db_con():
-    "подключение к dwh"
-    try:
-        conn = psycopg2.connect(
-        dbname=db,
-        port = "5432",
-        user=login,
-        password=password,
-        host=host
-        )
-    except Exception as e:
-        logger.error(f'failed connect to db with error: {e}')
-    return conn   
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-def execute_sql_script(file_path):
-    "Запуск sql скрипта"
-    con = db_con()
-    cursor = con.cursor()
-    import os
-    print(f"Текущая рабочая директория: {os.getcwd()}")
-    with open(f'{file_path}.sql', 'r') as file:
-        sql_script = file.read()
-    try:
-        cursor.execute(sql_script)
-        con.commit()
-        logger.info('successfully executed sql script')
-        con.close()
-    except Exception as e:
-        con.rollback()
-        con.close()
-        logger.error(f'failed to execute sql script with error: {e}')
-        raise e
+      # Получаем список изменённых файлов в последнем коммите
+      - name: Get changed files
+        id: changed-files
+        uses: tj-actions/changed-files@v35
+        with:
+          files: |
+            functions.py
 
+      - name: Create user folder on VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            mkdir -p "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/dags"
+
+      # Копируем переименованные файлы в общую папку dags/ на ВМ
+      - name: Copy functions to VM
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "functions.py"
+          target: "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/dags"
+          
+      # Создаём файл .env и записываем в него переменные
+      - name: Create .env file on VM
+        uses: appleboy/ssh-action@v1
+        with:
+          host: "95.213.230.26"
+          username: "root"
+          port: "22"
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cat > "/home/apache-superset/airflow/dags/${{ secrets.OWNER }}/dags/.env" << EOF
+            login=${{ secrets.OWNER }}
+            password=${{ secrets.DB_PASS }}
+            EOF
