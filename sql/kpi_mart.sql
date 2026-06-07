@@ -5,7 +5,7 @@ fact_revenue_day numeric,
 cum_revenue_in_month numeric,
 plan_minimum_revenue numeric,
 plan_reach_percent int,
-plan_is_reached boolean
+plan_is_reached boolean 
 )
 ;
 
