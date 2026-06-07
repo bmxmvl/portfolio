@@ -3,7 +3,6 @@ import logging
 from airflow.models import Variable
 
 logger = logging.getLogger(__name__)
-
 host = Variable.get("host_dm")
 login = Variable.get("login")
 password = Variable.get("password")
