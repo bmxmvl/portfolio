@@ -1,6 +1,6 @@
 from airflow import DAG 
 from airflow.operators.python import PythonOperator 
-from datetime import datetime 
+from datetime import datetime
 from functions import execute_sql_script    
 
 OWNER = "{{ OWNER }}"
