@@ -1,3 +1,6 @@
+НУЖНА ОПТИМИЗАЦИЯ СКРИПТА
+
+
 create table if not exists max_b.customers_mart_inc (
 customer_id varchar(50),
 first_name text,
