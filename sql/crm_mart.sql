@@ -120,7 +120,7 @@ left join max_b.crm_costs e
     and coalesce(d.rate, '') = e.rate
 )
 
-insert into max_b.crm_mart 
+insert into max_b.crm_mart
 select
 select
 com_id,
