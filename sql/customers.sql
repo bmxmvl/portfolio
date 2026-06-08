@@ -55,3 +55,4 @@ END AS gender
 , insert_timestamp
 FROM customer_increment_tmp
 ;
+
