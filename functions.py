@@ -7,7 +7,6 @@ load_dotenv()
 
 login = os.environ['login']
 password = os.environ['password']
-
 logger = logging.getLogger(__name__)
 
 host = Variable.get("host_dm")
