@@ -18,7 +18,6 @@ create table if not exists max_b.ym_marketing_report (
     regioncountry varchar null,
     regioncity varchar null
 );
-
 with ym_hits_cte as (
 select 
 watchid,
