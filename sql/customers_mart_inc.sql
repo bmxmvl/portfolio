@@ -1,6 +1,3 @@
-НУЖНА ОПТИМИЗАЦИЯ СКРИПТА
-
-
 create table if not exists max_b.customers_mart_inc (
 customer_id varchar(50),
 first_name text,
@@ -30,6 +27,12 @@ dl_all json,
 customer_delete_dtm timestamp
 );
 
+
+create table if not exists max_b.docs_timestamp (
+last_timestamp timestamp
+);
+
+
 create temp table customer_id_increment as
 select customer_id
 from raw.customer_auth
@@ -37,7 +40,7 @@ where auth_date > (
     select coalesce(max(last_auth_dtm), '1900-01-01')::timestamp
     from max_b.customers_mart_inc
 )
-union
+union 
 select customer_id
 from core.customers
 where registration_dtm > (
@@ -48,15 +51,8 @@ union
 select (raw_data::jsonb ->> 'customer_id')::varchar as customer_id
 from raw.customer_documents
 where insert_timestamp > (
-    select coalesce(max(passport_valid_dtm), '1900-01-01')::timestamp
-    from max_b.customers_mart_inc
-)
-union
-select (raw_data::jsonb ->> 'customer_id')::varchar as customer_id
-from raw.customer_documents
-where insert_timestamp > (
-    select coalesce(max(dl_valid_dtm), '1900-01-01')::timestamp
-    from max_b.customers_mart_inc
+    select coalesce(max(last_timestamp), '1900-01-01')::timestamp
+    from max_b.docs_timestamp
 )
 union
 select customer_id
@@ -97,11 +93,7 @@ select
     customer_id,
     bool_or(auth_method in ('sms', 'push', '2fa', 'mfa')) as phone_is_confirmed,
     bool_or(auth_method = 'email') as email_is_confirmed
-from raw.customer_auth a
-where exists (
-    select 1 from customer_id_increment inc
-    where a.customer_id = inc.customer_id
-)
+from customer_auth_pars a
 group by customer_id;
 
 create temp table customer_increment as
@@ -151,13 +143,6 @@ customer_documents_cte as (
     left join customer_documents_ranked rn1 on rn1.customer_id = ag.customer_id and rn1.document_type = 'ru_passport' and rn1.rn_desc = 1
     left join customer_documents_ranked rn2 on rn2.customer_id = ag.customer_id and rn2.document_type = 'driver_license' and rn2.rn_desc = 1
 ),
-customer_auth_ranked as (
-    select
-        customer_id, auth_method,
-        row_number() over (partition by customer_id order by auth_date asc)  as rn_asc,
-        row_number() over (partition by customer_id order by auth_date desc) as rn_desc
-    from customer_auth_pars
-),
 customer_auth_agg as (
     select
         customer_id,
@@ -171,12 +156,19 @@ customer_auth_agg as (
 customer_auth_cte as (
     select
         ag.customer_id,
-        rn1.auth_method as first_auth_method, ag.first_auth_dtm,
-        rn2.auth_method as last_auth_method,  ag.last_auth_dtm,
-        ag.auth_methods, ag.auth_count
+        p1.auth_method as first_auth_method,
+        ag.first_auth_dtm,
+        p2.auth_method as last_auth_method, 
+        ag.last_auth_dtm,
+        ag.auth_methods,
+        ag.auth_count
     from customer_auth_agg ag
-    join customer_auth_ranked rn1 on rn1.customer_id = ag.customer_id and rn1.rn_asc  = 1
-    join customer_auth_ranked rn2 on rn2.customer_id = ag.customer_id and rn2.rn_desc = 1
+    join customer_auth_pars p1
+        on p1.customer_id = ag.customer_id 
+        and p1.auth_date = ag.first_auth_dtm
+    join customer_auth_pars p2 
+        on p2.customer_id = ag.customer_id 
+        and p2.auth_date = ag.last_auth_dtm
 )
 select *
 from customers_cte
@@ -191,4 +183,11 @@ where exists (
 );
 
 insert into max_b.customers_mart_inc
-select * from customer_increment
+select * from customer_increment;
+
+truncate max_b.docs_timestamp;
+
+insert into max_b.docs_timestamp
+select
+max(insert_timestamp)
+from raw.customer_documents
