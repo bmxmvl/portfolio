@@ -122,7 +122,6 @@ left join max_b.crm_costs e
 
 insert into max_b.crm_mart
 select
-select
 com_id,
 com_type,
 dtm,
