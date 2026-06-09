@@ -23,6 +23,7 @@ with last_date_cte as (
 select coalesce(max(order_date), date '1900-01-01') as last_order_date
 from max_b.pl_mart
 ),
+
 agg_cte as (
 select 
 order_date::date as order_date,
