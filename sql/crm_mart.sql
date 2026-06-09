@@ -62,65 +62,67 @@ select
 *
 from (
 select
-com_id,
-com_type,
-dtm,
-contact,
-status,
-provider,
-type,
-rate,
-row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
-from crm_cte a
-left join active_customers b on a.contact = b.customer_email
-	and b.registration_dtm < a.dtm
-where a.com_type = 'email'
+cc.com_id,
+cc.com_type,
+cc.dtm,
+cc.contact,
+cc.status,
+cc.provider,
+cc.type,
+cc.rate,
+ac.customer_id,
+row_number() over(partition by cc.contact order by ac.registration_dtm desc) as dtm_rn
+from crm_cte cc
+left join active_customers ac on cc.contact = ac.customer_email
+	and ac.registration_dtm < cc.dtm
+where cc.com_type = 'email'
 
 union all
 
 select
-com_id,
-com_type,
-dtm,
-contact,
-status,
-provider,
-type,
-rate,
-row_number() over(partition by a.contact order by b.registration_dtm desc) as dtm_rn
-from crm_cte a
-left join active_customers b on a.contact = b.customer_phone
-	and b.registration_dtm < a.dtm
-where a.com_type = 'sms'
-) c
+cc.com_id,
+cc.com_type,
+cc.dtm,
+cc.contact,
+cc.status,
+cc.provider,
+cc.type,
+cc.rate,
+ac.customer_id,
+row_number() over(partition by cc.contact order by ac.registration_dtm desc) as dtm_rn
+from crm_cte cc
+left join active_customers ac on cc.contact = ac.customer_phone
+	and ac.registration_dtm < cc.dtm
+where cc.com_type = 'sms'
+) a
 where dtm_rn = 1
 ),
 
 crm_customer_id_cost_cte as (
 select
-d.com_id,
-d.com_type,
-d.dtm,
-d.contact,
-d.status,
-d.provider,
-d.type,
-d.rate,
-d.customer_id,
-e.cost
-from crm_customer_id_cte d
-left join max_b.crm_costs e 
+ccic.com_id,
+ccic.com_type,
+ccic.dtm,
+ccic.contact,
+ccic.status,
+ccic.provider,
+ccic.type,
+ccic.rate,
+ccic.customer_id,
+cc.cost
+from crm_customer_id_cte ccic
+left join max_b.crm_costs cc 
 	on case 
-	when concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int) > (select max(quarter) from max_b.crm_costs)
+	when concat(extract(year from ccic.dtm)::int, 'Q', extract(quarter from ccic.dtm)::int) > (select max(quarter) from max_b.crm_costs)
 	then '2026Q1'
-	else concat(extract(year from d.dtm)::int, 'Q', extract(quarter from d.dtm)::int)
-	end = e.quarter
-    and d.com_type = e.com_type
-    and d.type = e.type
-    and coalesce(d.rate, '') = e.rate
+	else concat(extract(year from ccic.dtm)::int, 'Q', extract(quarter from ccic.dtm)::int)
+	end = cc.quarter
+    and ccic.com_type = cc.com_type
+    and ccic.type = cc.type
+    and coalesce(ccic.rate, '') = cc.rate
 )
 
-insert into max_b.crm_mart
+insert into max_b.crm_mart 
 select
 com_id,
 com_type,
